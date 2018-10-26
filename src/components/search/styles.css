@@ -1,0 +1,77 @@
+.search {
+  background: url('../../assets/images//bg@2x.jpg') no-repeat center;
+  background-size: cover;
+  height: 610px;
+  width: 100%;
+}
+
+.search-box {
+  background-color: #ffffff;
+  border-radius: 4px;
+  height: 511px;
+  left: 60px;
+  padding: 33px 30px 25px;
+  position: absolute;
+  top: 54px;
+  width: 536px;
+}
+
+.search-title {
+  color: #8e8e93;
+  font-size: 1.125rem;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.search-subtitle {
+  font-size: 2.5rem;
+  line-height: 1.25;
+  margin-bottom: 20px;
+}
+
+.search-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.submit-button {
+  align-self: flex-end;
+  background-color: #f5a623;
+  border: #f5a623;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 500;
+  margin-top: 5px;
+  padding: 15px 50px;
+}
+
+.checkbox-list {
+  font-size: 0.8rem;
+  margin-bottom: 13px;
+}
+
+.popup-title {
+  font-size: 0.8rem;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+.popup-section:not(:last-child) {
+  margin-bottom: 30px;
+}
+
+.buttons-list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: auto;
+}
+
+.range {
+  margin: 0 2%;
+  width: 96%;
+}
+
+.inner-checkbox {
+  margin-left: 7px;
+}

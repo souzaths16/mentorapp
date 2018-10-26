@@ -1,0 +1,32 @@
+.top-mentors {
+  background-color: #f9f9f9;
+  padding: 50px 0;
+}
+
+.top-mentors-content {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: 25% 25% 25% 25%;
+  grid-column-gap: 20px;
+  text-align: center;
+}
+
+.mentors-item-title {
+  font-weight: 500;
+  font-size: 1rem;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.mentors-item-description {
+  color: #8e8e93;
+  font-size: 0.875rem;
+  line-height: 1.42;
+}
+
+.mentors-item-avatar {
+  border-radius: 5px;
+  margin: 0 auto 25px auto;
+  text-align: center;
+  width: 100%;
+}
