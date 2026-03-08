@@ -13,7 +13,6 @@ export async function POST(req: NextRequest) {
     const { animals, location, theme } = await req.json()
 
     const animalNamesPt = animals.map((a: { namePt: string }) => a.namePt).join(' e ')
-    const animalNamesCa = animals.map((a: { nameCa: string }) => a.nameCa).join(' i ')
     const animalEmojis = animals.map((a: { emoji: string }) => a.emoji).join(' ')
 
     const systemPrompt = `Você é um contador de histórias infantil especializado em criar contos para crianças com autismo leve.
@@ -55,7 +54,7 @@ Responda APENAS com este JSON:
     const raw = textBlock.text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
     const storyData = JSON.parse(raw)
 
-    // 2. Generate one illustration per section with Pollinations.ai (free, no API key needed)
+    // 2. Build Pollinations.ai URLs — no server-side fetch needed, URLs are stable by prompt
     const stylePrefix =
       `Children's picture book illustration. Painterly style with soft watercolor and gouache textures. ` +
       `Warm muted pastel palette: peach, sage green, dusty blue, warm cream, soft amber. ` +
@@ -65,24 +64,10 @@ Responda APENAS com este JSON:
       `No text, no words, no letters anywhere in the image. ` +
       `Characters: ${animalNamesPt} (${animalEmojis}). Location: ${location.namePt}. `
 
-    async function fetchIllustration(scenePt: string): Promise<string> {
-      try {
-        const prompt = stylePrefix + `Scene: ${scenePt} Wide horizontal composition, full background scene.`
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1792&height=1024&nologo=true&model=flux`
-        const imgResponse = await fetch(url)
-        if (!imgResponse.ok) return ''
-        const arrayBuffer = await imgResponse.arrayBuffer()
-        const base64 = Buffer.from(arrayBuffer).toString('base64')
-        const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg'
-        return `data:${mimeType};base64,${base64}`
-      } catch {
-        return ''
-      }
-    }
-
-    const illustrationUrls = await Promise.all(
-      storyData.sections.map((s: { pt: string }) => fetchIllustration(s.pt))
-    )
+    const illustrationUrls = storyData.sections.map((s: { pt: string }) => {
+      const prompt = stylePrefix + `Scene: ${s.pt} Wide horizontal composition, full background scene.`
+      return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1792&height=1024&nologo=true&model=flux`
+    })
 
     return NextResponse.json({
       titlePt: storyData.titlePt,
