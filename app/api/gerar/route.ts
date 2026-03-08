@@ -1,27 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
   }
 
-  const openai = new OpenAI({ apiKey })
+  const client = new Anthropic({ apiKey })
 
   try {
     const { animals, location, theme } = await req.json()
 
     const animalNamesPt = animals.map((a: { namePt: string }) => a.namePt).join(', ')
-    const animalNamesCa = animals.map((a: { nameCa: string }) => a.nameCa).join(', ')
-    const animalEmojis = animals.map((a: { emoji: string }) => a.emoji).join('')
+    const animalEmojis = animals.map((a: { emoji: string }) => a.emoji).join(' ')
 
-    const systemPrompt = `Você é um contador de histórias infantil especializado em criar contos para crianças com autismo leve.
+    const prompt = `Você é um contador de histórias infantil especializado em criar contos para crianças com autismo leve.
 Você cria histórias gentis, com linguagem simples, repetição reconfortante e finais felizes e claros.
-As histórias devem ser educativas mas envolventes, com personagens animais adoráveis.
-IMPORTANTE: Você SEMPRE responde com JSON válido, sem markdown adicional.`
 
-    const userPrompt = `Crie um conto infantil em DUAS línguas simultaneamente: Português do Brasil e Catalão.
+Crie um conto infantil em DUAS línguas simultaneamente: Português do Brasil e Catalão.
 
 Animais da história: ${animalNamesPt} (${animalEmojis})
 Local: ${location.namePt} / ${location.nameCa}
@@ -34,8 +31,9 @@ Informação importante: O Gael tem 4-6 anos e autismo leve. A história deve:
 - Ser tranquilizadora e positiva
 - Ter 5 parágrafos curtos (4-6 frases cada)
 - Terminar de forma feliz e clara
+- O Catalão deve ser Catalão correto e natural (não Espanhol)
 
-Responda APENAS com este JSON (sem mais texto, sem markdown):
+Responda APENAS com este JSON válido (sem markdown, sem blocos de código, sem texto extra):
 {
   "titlePt": "Título em Português",
   "titleCa": "Títol en Català",
@@ -45,51 +43,30 @@ Responda APENAS com este JSON (sem mais texto, sem markdown):
     { "pt": "Parágrafo 3 em português...", "ca": "Paràgraf 3 en català..." },
     { "pt": "Parágrafo 4 em português...", "ca": "Paràgraf 4 en català..." },
     { "pt": "Parágrafo 5 em português...", "ca": "Paràgraf 5 en català..." }
-  ],
-  "illustrationPrompt": "Describe in English a children's book watercolor illustration scene with ${animalNamesPt} in ${location.namePt}. Warm, whimsical, soft colors, Oliver Jeffers style."
+  ]
 }`
 
-    // Generate story
-    const storyResponse = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.8,
-      response_format: { type: 'json_object' },
+    const message = await client.messages.create({
+      model: 'claude-opus-4-5',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }],
     })
 
-    const storyContent = storyResponse.choices[0].message.content || '{}'
-    const storyData = JSON.parse(storyContent)
+    const block = message.content[0]
+    if (block.type !== 'text') throw new Error('Unexpected response type')
 
-    // Generate illustration with DALL-E
-    let illustrationUrl = ''
-    try {
-      const illustrationPrompt = storyData.illustrationPrompt ||
-        `Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}.
-         Soft warm colors, whimsical style like Oliver Jeffers or Nicola Kinnear books.
-         No text, wide format, dreamy and magical atmosphere.`
-
-      const imageResponse = await openai.images.generate({
-        model: 'dall-e-3',
-        prompt: illustrationPrompt,
-        size: '1792x1024',
-        quality: 'standard',
-        style: 'vivid',
-        n: 1,
-      })
-
-      illustrationUrl = (imageResponse.data ?? [])[0]?.url || ''
-    } catch (imgError) {
-      console.error('Image generation failed:', imgError)
-      illustrationUrl = ''
+    // Strip potential markdown code fences
+    let jsonText = block.text.trim()
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
     }
+
+    const storyData = JSON.parse(jsonText)
 
     return NextResponse.json({
       titlePt: storyData.titlePt,
       titleCa: storyData.titleCa,
-      illustrationUrl,
+      illustrationUrl: '', // Illustration rendered client-side with emoji art
       sections: storyData.sections,
     })
   } catch (error) {
