@@ -79,7 +79,7 @@ export default function StoryPage() {
   }
 
   const { story: sd } = story
-  const hasImage = !!sd.illustrationUrl
+  const illustrationUrls = sd.illustrationUrls ?? []
 
   const audioIcon = audioState === 'loading' ? '⏳' : audioState === 'playing' ? '🔊' : audioState === 'error' ? '⚠️' : '🔇'
 
@@ -147,7 +147,9 @@ export default function StoryPage() {
 
       {/* ── Chapter cards ── */}
       <div className="px-4 space-y-5">
-        {sd.sections.map((section, index) => (
+        {sd.sections.map((section, index) => {
+          const imgUrl = illustrationUrls[index]
+          return (
           <div
             key={index}
             className="rounded-3xl overflow-hidden shadow-sm"
@@ -155,11 +157,11 @@ export default function StoryPage() {
           >
             {/* Illustration — top of card */}
             <div className="w-full" style={{ aspectRatio: '16/9', position: 'relative', background: '#F5EFE8' }}>
-              {hasImage ? (
+              {imgUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={sd.illustrationUrl}
-                  alt={sd.titleCa}
+                  src={imgUrl}
+                  alt={`${sd.titleCa} — capítol ${index + 1}`}
                   className="w-full h-full object-cover"
                   loading={index === 0 ? 'eager' : 'lazy'}
                 />
@@ -201,7 +203,8 @@ export default function StoryPage() {
               </div>
             </div>
           </div>
-        ))}
+          )
+        })}
 
         {/* End marker */}
         <div className="text-center py-8">
