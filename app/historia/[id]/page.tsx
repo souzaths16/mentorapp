@@ -22,14 +22,13 @@ export default function StoryPage() {
   useEffect(() => {
     const found = getStoryById(id)
     if (!found) {
-      router.replace('/salvos')
+      router.replace('/')
       return
     }
     setStory(found)
     setIsFavorite(found.favorite)
   }, [id, router])
 
-  // Cleanup audio on unmount
   useEffect(() => {
     return () => {
       if (audioRef.current) audioRef.current.pause()
@@ -57,7 +56,6 @@ export default function StoryPage() {
       return
     }
 
-    // If already have cached audio URL, just play it
     if (audioUrlRef.current) {
       playAudio(audioUrlRef.current)
       return
@@ -66,15 +64,12 @@ export default function StoryPage() {
     setAudioState('loading')
     try {
       const fullText = `${story.story.titleCa}. ${story.story.sections.map((s) => s.ca).join('. ')}`
-
       const response = await fetch('/api/audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: fullText, title: story.story.titleCa }),
       })
-
       if (!response.ok) throw new Error('Audio generation failed')
-
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       audioUrlRef.current = url
@@ -88,24 +83,20 @@ export default function StoryPage() {
   function playAudio(url: string) {
     const audio = new Audio(url)
     audioRef.current = audio
-
     audio.addEventListener('timeupdate', () => {
-      if (audio.duration) {
-        setAudioProgress((audio.currentTime / audio.duration) * 100)
-      }
+      if (audio.duration) setAudioProgress((audio.currentTime / audio.duration) * 100)
     })
     audio.addEventListener('ended', () => {
       setAudioState('idle')
       setAudioProgress(0)
     })
-
     audio.play()
     setAudioState('playing')
   }
 
   if (!story) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF8E7' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF8F0' }}>
         <div className="text-5xl float">📖</div>
       </div>
     )
@@ -113,154 +104,214 @@ export default function StoryPage() {
 
   const { story: storyData } = story
 
+  const audioIcon =
+    audioState === 'loading' ? '⏳' :
+    audioState === 'playing' ? '🔊' :
+    audioState === 'error'   ? '⚠️' : '🔇'
+
   return (
-    <div className="min-h-screen pb-10" style={{ background: '#FFF8E7' }}>
-      {/* Top bar */}
-      <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <Link href="/salvos" className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-lg">
+    <div className="min-h-screen pb-16" style={{ background: '#FFF8F0' }}>
+
+      {/* ── Top navigation bar ── */}
+      <div className="sticky top-0 z-20 px-4 py-3" style={{ background: '#FFF8F0/95', backdropFilter: 'blur(8px)' }}>
+        <div className="flex items-center justify-between gap-2">
+
+          {/* Back */}
+          <Link
+            href="/"
+            className="w-11 h-11 flex items-center justify-center rounded-2xl text-lg font-bold shadow-sm"
+            style={{ background: '#fff', border: '1.5px solid #E8E0D8', color: '#2C2416' }}
+          >
             ←
           </Link>
-          <span className="text-lg">{story.animals.map((a) => a.emoji).join(' ')}</span>
-          <button
-            onClick={handleFavorite}
-            className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-xl active:scale-90 transition-transform"
-          >
-            {isFavorite ? '⭐' : '☆'}
-          </button>
-        </div>
-      </div>
 
-      {/* Illustration */}
-      <div className="w-full aspect-[16/9] relative overflow-hidden">
-        {storyData.illustrationUrl ? (
-          <Image
-            src={storyData.illustrationUrl}
-            alt={storyData.titlePt}
-            fill
-            className="object-cover"
-            unoptimized
-            priority
-          />
-        ) : (
-          <IllustrationPlaceholder story={story} />
+          {/* Right controls */}
+          <div className="flex items-center gap-2">
+            {/* Audio */}
+            <button
+              onClick={handleAudio}
+              disabled={audioState === 'loading'}
+              className="w-11 h-11 flex items-center justify-center rounded-2xl text-lg shadow-sm active:scale-90 transition-transform"
+              style={{ background: '#fff', border: '1.5px solid #E8E0D8' }}
+            >
+              {audioIcon}
+            </button>
+
+            {/* Language chip */}
+            <div
+              className="h-11 flex items-center gap-1.5 px-3 rounded-2xl text-sm font-bold shadow-sm"
+              style={{ background: '#fff', border: '1.5px solid #E8E0D8', color: '#2C2416' }}
+            >
+              <span className="text-base">🌐</span>
+              <span>🇪🇸</span>
+              <span>CA</span>
+            </div>
+
+            {/* Save / favorite */}
+            <button
+              onClick={handleFavorite}
+              className="w-11 h-11 flex items-center justify-center rounded-2xl text-xl shadow-sm active:scale-90 transition-transform"
+              style={{ background: '#fff', border: '1.5px solid #E8E0D8' }}
+            >
+              {isFavorite ? '❤️' : '🤍'}
+            </button>
+          </div>
+        </div>
+
+        {/* Audio progress bar */}
+        {(audioState === 'playing' || audioState === 'paused') && (
+          <div className="mt-2 mx-1 h-1 rounded-full overflow-hidden" style={{ background: '#E8E0D8' }}>
+            <div
+              className="h-full rounded-full audio-bar"
+              style={{
+                width: `${audioProgress}%`,
+                background: 'linear-gradient(90deg, #4BB5AE, #A29BFE)',
+              }}
+            />
+          </div>
         )}
       </div>
 
-      {/* Title */}
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="font-display text-3xl font-bold text-gray-800 leading-tight">
-          {storyData.titlePt}
-        </h1>
-        <h2 className="font-display text-2xl text-[#4ECDC4] font-semibold mt-1">
-          {storyData.titleCa}
-        </h2>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <Chip emoji={story.location.emoji} text={story.location.namePt} color="#4ECDC4" />
-          <Chip emoji={story.theme.emoji} text={story.theme.namePt} color="#FFD93D" />
+      {/* ── Header: animal emojis + title ── */}
+      <div className="px-5 pt-3 pb-4">
+        <div className="flex gap-2 text-5xl mb-3">
           {story.animals.map((a) => (
-            <Chip key={a.id} emoji={a.emoji} text={a.namePt} color="#A29BFE" />
+            <span key={a.id}>{a.emoji}</span>
           ))}
+        </div>
+
+        <h1 className="font-black text-2xl leading-tight" style={{ color: '#2C2416' }}>
+          {storyData.titleCa}
+        </h1>
+        <p className="text-base mt-1" style={{ color: '#8B7355' }}>
+          {storyData.titlePt}
+        </p>
+
+        <div className="flex flex-wrap gap-2 mt-3">
+          <Chip emoji="✨" text={story.location.nameCa} />
+          <Chip emoji={story.theme.emoji} text={story.theme.nameCa} />
         </div>
       </div>
 
-      {/* Audio Player */}
-      <div className="mx-5 mb-6 bg-white rounded-2xl shadow-md p-4 border border-gray-100">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleAudio}
-            disabled={audioState === 'loading'}
-            className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl
-                        font-bold shadow flex-shrink-0 active:scale-90 transition-transform ${
-              audioState === 'loading'
-                ? 'bg-gray-300 cursor-wait'
-                : 'bg-gradient-to-br from-[#4ECDC4] to-[#A29BFE]'
-            }`}
-          >
-            {audioState === 'loading' ? '⏳' : audioState === 'playing' ? '⏸' : '▶'}
-          </button>
+      {/* ── Cover illustration ── */}
+      <div className="mx-4 mb-2">
+        <div className="rounded-3xl overflow-hidden shadow-md" style={{ aspectRatio: '4/3', position: 'relative' }}>
+          {storyData.illustrationUrl ? (
+            <Image
+              src={storyData.illustrationUrl}
+              alt={storyData.titleCa}
+              fill
+              className="object-cover"
+              unoptimized
+              priority
+            />
+          ) : (
+            <IllustrationPlaceholder story={story} />
+          )}
+        </div>
+      </div>
 
-          <div className="flex-1">
-            <p className="text-xs font-bold text-gray-700">
-              🎙 Ouvir em Catalão · Escoltar en Català
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {audioState === 'idle' && 'Voz nativa · Veu nativa'}
-              {audioState === 'loading' && 'Preparando áudio... · Preparant àudio...'}
-              {audioState === 'playing' && 'A reproduzir... · Reproduint...'}
-              {audioState === 'paused' && 'Pausado · En pausa'}
-              {audioState === 'error' && '⚠️ Erro ao gerar áudio · Error en generar àudio'}
-            </p>
-            {(audioState === 'playing' || audioState === 'paused') && (
-              <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#4ECDC4] to-[#A29BFE] rounded-full audio-bar"
-                  style={{ width: `${audioProgress}%` }}
-                />
+      {/* ── Story sections ── */}
+      <div className="px-4 mt-4 space-y-4">
+        {storyData.sections.map((section, index) => (
+          <div key={index}>
+            {/* Chapter label */}
+            <div className="mb-2 px-1">
+              <span
+                className="text-xs font-black tracking-widest"
+                style={{ color: '#B0A090', letterSpacing: '0.12em' }}
+              >
+                CAPÍTOL {index + 1} · CAPÍTULO {index + 1}
+              </span>
+            </div>
+
+            {/* Bilingual text card */}
+            <div
+              className="rounded-3xl overflow-hidden shadow-sm"
+              style={{ background: '#fff', border: '1.5px solid #EDE5DC' }}
+            >
+              <div className="grid grid-cols-2 divide-x" style={{ borderColor: '#EDE5DC' }}>
+                {/* Portuguese column */}
+                <div className="p-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-base">🇧🇷</span>
+                    <span className="text-[10px] font-black tracking-widest" style={{ color: '#8B7355' }}>
+                      PORTUGUÊS
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: '#3D3020' }}>
+                    {section.pt}
+                  </p>
+                </div>
+
+                {/* Catalan column */}
+                <div className="p-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-base">🇪🇸</span>
+                    <span className="text-[10px] font-black tracking-widest" style={{ color: '#8B7355' }}>
+                      CATALÀ
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: '#3D3020' }}>
+                    {section.ca}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Character illustration between sections */}
+            {index < storyData.sections.length - 1 && (
+              <div
+                className="mt-4 rounded-3xl overflow-hidden shadow-sm"
+                style={{ background: '#fff', border: '1.5px solid #EDE5DC', aspectRatio: '4/3', position: 'relative' }}
+              >
+                {storyData.charactersUrl ? (
+                  <Image
+                    src={storyData.charactersUrl}
+                    alt={`Ilustração ${index + 1}`}
+                    fill
+                    className="object-contain p-6"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex gap-4 text-6xl">
+                      {story.animals.map((a) => (
+                        <span key={a.id} className="float">{a.emoji}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Story content - Bilingual */}
-      <div className="px-5">
-        {/* Language header */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="flex items-center gap-2 bg-green-50 rounded-xl px-3 py-2">
-            <span className="text-xl">🇧🇷</span>
-            <p className="text-xs font-bold text-green-700">Português BR</p>
-          </div>
-          <div className="flex items-center gap-2 bg-yellow-50 rounded-xl px-3 py-2">
-            <span className="text-xl">🟡🔴</span>
-            <p className="text-xs font-bold text-yellow-700">Català</p>
-          </div>
-        </div>
-
-        {/* Story sections */}
-        {storyData.sections.map((section, index) => (
-          <div key={index} className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-6 h-6 rounded-full bg-[#4ECDC4] flex items-center justify-center
-                              text-white text-xs font-bold flex-shrink-0">
-                {index + 1}
-              </div>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-green-50 rounded-2xl p-4 border-l-4 border-green-400">
-                <p className="story-text text-sm text-gray-800 leading-relaxed">{section.pt}</p>
-              </div>
-              <div className="bg-yellow-50 rounded-2xl p-4 border-l-4 border-yellow-400">
-                <p className="story-text text-sm text-gray-800 leading-relaxed italic">{section.ca}</p>
-              </div>
-            </div>
-          </div>
         ))}
 
-        {/* End */}
-        <div className="text-center py-6">
-          <div className="text-4xl mb-2">🌟</div>
-          <p className="font-display text-lg text-gray-500">Fim · Fi</p>
+        {/* End marker */}
+        <div className="text-center py-8">
+          <div className="text-5xl mb-2">🌟</div>
+          <p className="font-black text-base" style={{ color: '#B0A090' }}>Fim · Fi</p>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3 mt-4 pb-6">
+        {/* Bottom action buttons */}
+        <div className="flex gap-3 pb-4">
           <button
             onClick={handleFavorite}
-            className={`flex-1 py-3 rounded-2xl font-display font-bold text-base
-                        border-2 transition-all active:scale-95 ${
+            className="flex-1 py-3.5 rounded-2xl font-black text-base transition-all active:scale-95"
+            style={
               isFavorite
-                ? 'bg-amber-50 border-[#FFD93D] text-amber-600'
-                : 'bg-white border-gray-200 text-gray-600'
-            }`}
+                ? { background: '#FFF0F0', border: '2px solid #FFB3B3', color: '#E05555' }
+                : { background: '#fff', border: '2px solid #EDE5DC', color: '#8B7355' }
+            }
           >
-            {isFavorite ? '⭐ Favorita' : '☆ Favoritar'}
+            {isFavorite ? '❤️ Guardada · Guardada' : '🤍 Guardar · Desar'}
           </button>
           <Link href="/criar" className="flex-1">
-            <button className="w-full py-3 rounded-2xl font-display font-bold text-base
-                               bg-[#4ECDC4] text-white active:scale-95 transition-transform">
-              ✨ Nova História
+            <button
+              className="w-full py-3.5 rounded-2xl font-black text-base text-white active:scale-95 transition-transform"
+              style={{ background: '#4BB5AE' }}
+            >
+              ✨ Nova Història
             </button>
           </Link>
         </div>
@@ -269,11 +320,11 @@ export default function StoryPage() {
   )
 }
 
-function Chip({ emoji, text, color }: { emoji: string; text: string; color: string }) {
+function Chip({ emoji, text }: { emoji: string; text: string }) {
   return (
     <span
-      className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full text-gray-700"
-      style={{ background: `${color}22`, border: `1.5px solid ${color}55` }}
+      className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
+      style={{ background: '#F0EBE3', color: '#5C4E3A', border: '1.5px solid #DDD5C8' }}
     >
       {emoji} {text}
     </span>
@@ -281,24 +332,23 @@ function Chip({ emoji, text, color }: { emoji: string; text: string; color: stri
 }
 
 function IllustrationPlaceholder({ story }: { story: SavedStory }) {
-  const gradients = [
-    ['#4ECDC4', '#A29BFE'],
+  const gradients: [string, string][] = [
+    ['#A8E6CF', '#7EC8C8'],
     ['#FFD93D', '#FF6B6B'],
-    ['#55EFC4', '#4ECDC4'],
+    ['#C9B8FF', '#7EC8C8'],
   ]
   const [g1, g2] = gradients[story.animals.length % gradients.length]
-
   return (
     <div
-      className="w-full h-full flex flex-col items-center justify-center"
+      className="w-full h-full flex flex-col items-center justify-center gap-4"
       style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
     >
-      <div className="flex gap-3 text-7xl mb-4">
+      <div className="flex gap-3 text-7xl">
         {story.animals.slice(0, 3).map((a) => (
           <span key={a.id} className="float drop-shadow-lg">{a.emoji}</span>
         ))}
       </div>
-      <div className="text-5xl">{story.location.emoji}</div>
+      <span className="text-5xl">{story.location.emoji}</span>
     </div>
   )
 }

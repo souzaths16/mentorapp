@@ -47,7 +47,8 @@ Responda APENAS com este JSON (sem mais texto, sem markdown):
     { "pt": "Parágrafo 4 em português...", "ca": "Paràgraf 4 en català..." },
     { "pt": "Parágrafo 5 em português...", "ca": "Paràgraf 5 en català..." }
   ],
-  "illustrationPrompt": "Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}. Soft warm colors, whimsical style like Oliver Jeffers books. No text, wide format, dreamy magical atmosphere."
+  "illustrationPrompt": "Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}. Soft warm colors, whimsical style like Oliver Jeffers books. No text, wide format, dreamy magical atmosphere.",
+  "charactersPrompt": "Children's book illustration: cute ${animalNamesPt} as adorable sticker characters, isolated on plain white background, soft watercolor style, no scene or background environment, just the characters centered, square format."
 }`
 
     // Generate story with Claude
@@ -67,27 +68,48 @@ Responda APENAS com este JSON (sem mais texto, sem markdown):
     const raw = textBlock.text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
     const storyData = JSON.parse(raw)
 
-    // Generate illustration with DALL-E 3 (if OpenAI key available)
+    // Generate both illustrations with DALL-E 3 in parallel (if OpenAI key available)
     let illustrationUrl = ''
+    let charactersUrl = ''
     const openaiKey = process.env.OPENAI_API_KEY
     if (openaiKey) {
-      try {
-        const openai = new OpenAI({ apiKey: openaiKey })
-        const illustrationPrompt = storyData.illustrationPrompt ||
-          `Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}. Soft warm colors, whimsical style like Oliver Jeffers. No text, wide format, dreamy magical atmosphere.`
+      const openai = new OpenAI({ apiKey: openaiKey })
 
-        const imageResponse = await openai.images.generate({
+      const coverPrompt = storyData.illustrationPrompt ||
+        `Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}. Soft warm colors, whimsical style like Oliver Jeffers. No text, wide format, dreamy magical atmosphere.`
+
+      const charsPrompt = storyData.charactersPrompt ||
+        `Children's book illustration: cute ${animalNamesPt} as adorable sticker characters, isolated on plain white background, soft watercolor style, no background scene, just the characters, square format.`
+
+      const [coverResult, charsResult] = await Promise.allSettled([
+        openai.images.generate({
           model: 'dall-e-3',
-          prompt: illustrationPrompt,
+          prompt: coverPrompt,
           size: '1792x1024',
           quality: 'standard',
           style: 'vivid',
           n: 1,
-        })
+        }),
+        openai.images.generate({
+          model: 'dall-e-3',
+          prompt: charsPrompt,
+          size: '1024x1024',
+          quality: 'standard',
+          style: 'natural',
+          n: 1,
+        }),
+      ])
 
-        illustrationUrl = (imageResponse.data ?? [])[0]?.url || ''
-      } catch (imgError) {
-        console.error('Image generation failed:', imgError)
+      if (coverResult.status === 'fulfilled') {
+        illustrationUrl = (coverResult.value.data ?? [])[0]?.url || ''
+      } else {
+        console.error('Cover image generation failed:', coverResult.reason)
+      }
+
+      if (charsResult.status === 'fulfilled') {
+        charactersUrl = (charsResult.value.data ?? [])[0]?.url || ''
+      } else {
+        console.error('Characters image generation failed:', charsResult.reason)
       }
     }
 
@@ -95,6 +117,7 @@ Responda APENAS com este JSON (sem mais texto, sem markdown):
       titlePt: storyData.titlePt,
       titleCa: storyData.titleCa,
       illustrationUrl,
+      charactersUrl,
       sections: storyData.sections,
     })
   } catch (error) {
