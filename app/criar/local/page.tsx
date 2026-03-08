@@ -11,9 +11,7 @@ export default function ChooseLocation() {
   const [selected, setSelected] = useState<Location | null>(null)
 
   useEffect(() => {
-    // If no animals selected, go back
-    const animals = sessionStorage.getItem('gael-animals')
-    if (!animals) router.replace('/criar')
+    if (!sessionStorage.getItem('gael-animals')) router.replace('/criar')
   }, [router])
 
   function handleNext() {
@@ -23,28 +21,39 @@ export default function ChooseLocation() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#FFF8E7' }}>
-      {/* Header */}
-      <div className="px-5 pt-8 pb-4" style={{ background: 'linear-gradient(160deg, #4ECDC4 0%, #FFF8E7 60%)' }}>
-        <div className="flex items-center gap-3 mb-4">
-          <Link href="/criar" className="w-9 h-9 bg-white/70 rounded-full flex items-center justify-center shadow text-lg">
+    <div className="min-h-screen flex flex-col page-enter" style={{ background: 'var(--cream)' }}>
+
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-5 pt-8 pb-5">
+        <Link href="/criar">
+          <button
+            className="w-10 h-10 rounded-2xl flex items-center justify-center text-base font-bold border"
+            style={{ background: 'var(--card)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+          >
             ←
-          </Link>
-          <StepIndicator current={2} />
+          </button>
+        </Link>
+        <StepBar current={2} />
+        <div
+          className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-black"
+          style={{ background: 'var(--teal-light)', color: 'var(--teal)' }}
+        >
+          2/3
         </div>
-        <h2 className="font-display text-3xl font-bold text-gray-800">
-          Onde acontece?
-        </h2>
-        <p className="font-display text-xl text-[#4ECDC4] font-semibold">
+      </div>
+
+      {/* Title */}
+      <div className="px-5 mb-5">
+        <h2 className="text-3xl font-black" style={{ color: 'var(--text)' }}>
           On passa la història?
-        </p>
-        <p className="text-gray-500 text-sm mt-1">
-          Escolha o cenário · Tria l'escenari
+        </h2>
+        <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--text-muted)' }}>
+          Onde se passa a história?
         </p>
       </div>
 
       {/* Locations grid */}
-      <div className="flex-1 px-4 py-4 pb-32 overflow-y-auto">
+      <div className="flex-1 px-5 pb-32 overflow-y-auto">
         <div className="grid grid-cols-2 gap-3">
           {locations.map((loc) => {
             const isSelected = selected?.id === loc.id
@@ -52,22 +61,26 @@ export default function ChooseLocation() {
               <button
                 key={loc.id}
                 onClick={() => setSelected(loc)}
-                className={`animal-card relative flex flex-col items-center justify-center
-                            p-5 rounded-2xl border-2 shadow-sm transition-all text-center ${
+                className="card-press text-left p-4 rounded-3xl border"
+                style={
                   isSelected
-                    ? 'bg-teal-50 border-[#4ECDC4] scale-95'
-                    : 'bg-white border-gray-200 active:scale-95'
-                }`}
+                    ? { background: 'var(--teal)', borderColor: 'var(--teal)' }
+                    : { background: 'var(--card)', borderColor: 'var(--card-border)' }
+                }
               >
-                {isSelected && (
-                  <div className="absolute top-2 right-2 w-6 h-6 bg-[#4ECDC4] rounded-full
-                                  flex items-center justify-center text-white text-xs font-bold">
-                    ✓
-                  </div>
-                )}
-                <span className="text-5xl mb-2">{loc.emoji}</span>
-                <p className="text-sm font-bold text-gray-800 leading-tight">{loc.namePt}</p>
-                <p className="text-xs text-[#4ECDC4] leading-tight mt-0.5">{loc.nameCa}</p>
+                <div className="text-4xl mb-3">{loc.emoji}</div>
+                <p
+                  className="text-base font-black leading-tight"
+                  style={{ color: isSelected ? 'white' : 'var(--text)' }}
+                >
+                  {loc.nameCa}
+                </p>
+                <p
+                  className="text-sm font-medium mt-0.5"
+                  style={{ color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)' }}
+                >
+                  {loc.namePt}
+                </p>
               </button>
             )
           })}
@@ -75,38 +88,34 @@ export default function ChooseLocation() {
       </div>
 
       {/* Next button */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-8 pt-4
-                      bg-gradient-to-t from-[#FFF8E7] via-[#FFF8E7]">
+      <div
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-8 pt-4"
+        style={{ background: 'linear-gradient(to top, var(--cream) 70%, transparent)' }}
+      >
         <button
           onClick={handleNext}
           disabled={!selected}
-          className={`w-full py-4 rounded-2xl font-display text-xl font-bold shadow-lg
-                      transition-all active:scale-95 ${
-            selected
-              ? 'bg-[#4ECDC4] text-white'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
+          className="w-full py-4 rounded-2xl font-black text-lg transition-opacity"
+          style={{
+            background: selected ? 'var(--teal)' : 'var(--card-border)',
+            color: selected ? 'white' : 'var(--text-muted)',
+          }}
         >
-          {selected ? `${selected.emoji} Próximo · Següent →` : 'Escolha um local · Tria un lloc'}
+          Següent · Próximo →
         </button>
       </div>
     </div>
   )
 }
 
-function StepIndicator({ current }: { current: number }) {
+function StepBar({ current }: { current: number }) {
   return (
-    <div className="flex items-center gap-1.5">
-      {[1, 2, 3].map((step) => (
+    <div className="flex items-center gap-1.5 flex-1 mx-3">
+      {[1, 2, 3].map((s) => (
         <div
-          key={step}
-          className={`rounded-full transition-all ${
-            step === current
-              ? 'w-8 h-3 bg-[#4ECDC4]'
-              : step < current
-              ? 'w-3 h-3 bg-[#4ECDC4]'
-              : 'w-3 h-3 bg-gray-300'
-          }`}
+          key={s}
+          className="h-2 flex-1 rounded-full"
+          style={{ background: s <= current ? 'var(--teal)' : 'var(--card-border)' }}
         />
       ))}
     </div>

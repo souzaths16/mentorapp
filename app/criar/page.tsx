@@ -15,9 +15,8 @@ export default function ChooseAnimals() {
 
   function toggleAnimal(animal: Animal) {
     setSelected((prev) => {
-      const exists = prev.find((a) => a.id === animal.id)
-      if (exists) return prev.filter((a) => a.id !== animal.id)
-      if (prev.length >= 3) return prev // max 3
+      if (prev.find((a) => a.id === animal.id)) return prev.filter((a) => a.id !== animal.id)
+      if (prev.length >= 3) return prev
       return [...prev, animal]
     })
   }
@@ -29,78 +28,74 @@ export default function ChooseAnimals() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#FFF8E7' }}>
-      {/* Header */}
-      <div className="px-5 pt-8 pb-4" style={{ background: 'linear-gradient(160deg, #A29BFE 0%, #FFF8E7 60%)' }}>
-        <div className="flex items-center gap-3 mb-4">
-          <Link href="/" className="w-9 h-9 bg-white/70 rounded-full flex items-center justify-center shadow text-lg">
-            ←
-          </Link>
-          <StepIndicator current={1} />
-        </div>
-        <h2 className="font-display text-3xl font-bold text-gray-800">
-          Escolha os Animais
-        </h2>
-        <p className="font-display text-xl text-purple-400 font-semibold">
-          Tria els Animals
-        </p>
-        <p className="text-gray-500 text-sm mt-1">
-          Escolha até 3 · Tria fins a 3
-        </p>
+    <div className="min-h-screen flex flex-col page-enter" style={{ background: 'var(--cream)' }}>
 
-        {/* Selected animals preview */}
-        {selected.length > 0 && (
-          <div className="flex gap-2 mt-3 flex-wrap">
-            {selected.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => toggleAnimal(a)}
-                className="flex items-center gap-1 bg-white rounded-full px-3 py-1.5 shadow-sm
-                           border-2 border-purple-300 text-sm font-semibold text-gray-700
-                           active:scale-95 transition-transform"
-              >
-                <span>{a.emoji}</span>
-                <span>{a.namePt}</span>
-                <span className="text-purple-400 ml-1">×</span>
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-5 pt-8 pb-5">
+        <Link href="/">
+          <button
+            className="w-10 h-10 rounded-2xl flex items-center justify-center text-base font-bold border"
+            style={{ background: 'var(--card)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+          >
+            ←
+          </button>
+        </Link>
+        <StepBar current={1} />
+        <div
+          className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-black"
+          style={{ background: 'var(--teal-light)', color: 'var(--teal)' }}
+        >
+          1/3
+        </div>
       </div>
 
+      {/* Title */}
+      <div className="px-5 mb-4">
+        <h2 className="text-3xl font-black" style={{ color: 'var(--text)' }}>
+          Tria els personatges
+        </h2>
+        <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--text-muted)' }}>
+          Escolha os personagens
+        </p>
+      </div>
+
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div className="flex gap-2 px-5 mb-3 flex-wrap">
+          {selected.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => toggleAnimal(a)}
+              className="flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-full"
+              style={{ background: 'var(--teal-light)', color: 'var(--teal)', border: '1.5px solid var(--teal)' }}
+            >
+              {a.emoji} {a.nameCa} <span className="ml-0.5 opacity-70">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Category tabs */}
-      <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+      <div className="flex gap-2 px-5 mb-4 overflow-x-auto no-scrollbar">
         {animalCategories.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl text-sm
-                        font-semibold transition-all active:scale-95 border-2 ${
+            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-sm font-bold transition-colors"
+            style={
               activeCategory === cat.id
-                ? 'bg-[#A29BFE] text-white border-[#A29BFE] shadow-md'
-                : 'bg-white text-gray-600 border-gray-200'
-            }`}
+                ? { background: 'var(--blue-tab)', color: 'white' }
+                : { background: 'var(--card)', color: 'var(--text)', border: '1.5px solid var(--card-border)' }
+            }
           >
-            <span>{cat.emoji}</span>
-            <span className="hidden sm:inline">{cat.namePt}</span>
+            {cat.emoji} {cat.nameCa}
           </button>
         ))}
       </div>
 
-      {/* Category name */}
-      <div className="px-5 mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{currentCategory.emoji}</span>
-          <div>
-            <p className="font-display text-xl font-bold text-gray-800">{currentCategory.namePt}</p>
-            <p className="font-display text-sm text-purple-400">{currentCategory.nameCa}</p>
-          </div>
-        </div>
-      </div>
-
       {/* Animals grid */}
-      <div className="flex-1 px-4 pb-32 overflow-y-auto">
-        <div className="grid grid-cols-3 gap-3">
+      <div className="flex-1 px-5 pb-32 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-3">
           {currentCategory.animals.map((animal) => {
             const isSelected = selected.some((a) => a.id === animal.id)
             const isDisabled = !isSelected && selected.length >= 3
@@ -109,24 +104,36 @@ export default function ChooseAnimals() {
                 key={animal.id}
                 onClick={() => toggleAnimal(animal)}
                 disabled={isDisabled}
-                className={`animal-card relative flex flex-col items-center justify-center
-                            p-3 rounded-2xl border-2 shadow-sm transition-all
-                            ${isSelected
-                              ? 'bg-purple-100 border-[#A29BFE] scale-95'
-                              : isDisabled
-                              ? 'bg-gray-100 border-gray-200 opacity-40'
-                              : 'bg-white border-gray-200 active:scale-95'
-                            }`}
+                className="card-press relative text-left p-4 rounded-3xl border"
+                style={
+                  isSelected
+                    ? { background: 'var(--blue-tab)', borderColor: 'var(--blue-tab)' }
+                    : isDisabled
+                    ? { background: '#f0f0f0', borderColor: '#e0e0e0', opacity: 0.4 }
+                    : { background: 'var(--blue-tab-bg)', borderColor: 'transparent' }
+                }
               >
                 {isSelected && (
-                  <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-[#A29BFE] rounded-full
-                                  flex items-center justify-center text-white text-xs font-bold">
+                  <div
+                    className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{ background: 'rgba(255,255,255,0.3)', color: 'white' }}
+                  >
                     ✓
                   </div>
                 )}
-                <span className="text-4xl mb-1">{animal.emoji}</span>
-                <p className="text-xs font-bold text-gray-700 text-center leading-tight">{animal.namePt}</p>
-                <p className="text-xs text-purple-400 text-center leading-tight">{animal.nameCa}</p>
+                <div className="text-4xl mb-3">{animal.emoji}</div>
+                <p
+                  className="text-base font-black leading-tight"
+                  style={{ color: isSelected ? 'white' : 'var(--blue-tab)' }}
+                >
+                  {animal.nameCa}
+                </p>
+                <p
+                  className="text-sm font-medium mt-0.5"
+                  style={{ color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)' }}
+                >
+                  {animal.namePt}
+                </p>
               </button>
             )
           })}
@@ -134,40 +141,34 @@ export default function ChooseAnimals() {
       </div>
 
       {/* Next button */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-8 pt-4
-                      bg-gradient-to-t from-[#FFF8E7] via-[#FFF8E7]">
+      <div
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-8 pt-4"
+        style={{ background: 'linear-gradient(to top, var(--cream) 70%, transparent)' }}
+      >
         <button
           onClick={handleNext}
           disabled={selected.length === 0}
-          className={`w-full py-4 rounded-2xl font-display text-xl font-bold shadow-lg
-                      transition-all active:scale-95 ${
-            selected.length > 0
-              ? 'bg-[#A29BFE] text-white'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
+          className="w-full py-4 rounded-2xl font-black text-lg text-white transition-opacity flex items-center justify-center gap-2"
+          style={{
+            background: selected.length > 0 ? 'var(--teal)' : 'var(--card-border)',
+            color: selected.length > 0 ? 'white' : 'var(--text-muted)',
+          }}
         >
-          {selected.length === 0
-            ? 'Escolha pelo menos 1 · Tria almenys 1'
-            : `Próximo · Següent →`}
+          Següent · Próximo →
         </button>
       </div>
     </div>
   )
 }
 
-function StepIndicator({ current }: { current: number }) {
+function StepBar({ current }: { current: number }) {
   return (
-    <div className="flex items-center gap-1.5">
-      {[1, 2, 3].map((step) => (
+    <div className="flex items-center gap-1.5 flex-1 mx-3">
+      {[1, 2, 3].map((s) => (
         <div
-          key={step}
-          className={`rounded-full transition-all ${
-            step === current
-              ? 'w-8 h-3 bg-[#A29BFE]'
-              : step < current
-              ? 'w-3 h-3 bg-[#A29BFE]'
-              : 'w-3 h-3 bg-gray-300'
-          }`}
+          key={s}
+          className="h-2 flex-1 rounded-full"
+          style={{ background: s <= current ? 'var(--teal)' : 'var(--card-border)' }}
         />
       ))}
     </div>
