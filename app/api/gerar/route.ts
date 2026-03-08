@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import OpenAI from 'openai'
 
 export async function POST(req: NextRequest) {
   const anthropicKey = process.env.ANTHROPIC_API_KEY
@@ -56,47 +55,33 @@ Responda APENAS com este JSON:
     const raw = textBlock.text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
     const storyData = JSON.parse(raw)
 
-    // 2. Generate illustration with DALL-E 3
+    // 2. Generate illustration with Pollinations.ai (free, no API key needed)
     let illustrationUrl = ''
-    const openaiKey = process.env.OPENAI_API_KEY
-    if (openaiKey) {
-      try {
-        const openai = new OpenAI({ apiKey: openaiKey })
+    try {
+      const illustrationPrompt =
+        `Children's picture book illustration. Painterly style with soft watercolor and gouache textures. ` +
+        `Warm muted pastel palette: peach, sage green, dusty blue, warm cream, soft amber. ` +
+        `Expressive rounded cute animal characters with big friendly eyes. ` +
+        `Detailed atmospheric background with soft dreamy lighting. ` +
+        `Cozy magical mood, lush environment. Similar to modern children's picture books. ` +
+        `No text, no words, no letters anywhere in the image. ` +
+        `Scene: ${animalNamesCa} (${animalEmojis}) in a ${location.namePt.toLowerCase()}, ` +
+        `showing the theme of "${theme.namePt.toLowerCase()}". ` +
+        `Wide horizontal composition, full background scene.`
 
-        // Style inspired by Tadgh, Gediminas Pranckevicius, Marcela Soares, Mo Mo
-        const illustrationPrompt =
-          `Children's picture book illustration. Painterly style with soft watercolor and gouache textures. ` +
-          `Warm muted pastel palette: peach, sage green, dusty blue, warm cream, soft amber. ` +
-          `Expressive rounded cute animal characters with big friendly eyes. ` +
-          `Detailed atmospheric background with soft dreamy lighting. ` +
-          `Cozy magical mood, lush environment. Similar to modern children's picture books. ` +
-          `No text, no words, no letters anywhere in the image. ` +
-          `Scene: ${animalNamesCa} (${animalEmojis}) in a ${location.namePt.toLowerCase()}, ` +
-          `showing the theme of "${theme.namePt.toLowerCase()}". ` +
-          `Wide horizontal composition, full background scene.`
+      const encodedPrompt = encodeURIComponent(illustrationPrompt)
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1792&height=1024&nologo=true&model=flux`
 
-        const dalleResponse = await openai.images.generate({
-          model: 'dall-e-3',
-          prompt: illustrationPrompt,
-          size: '1792x1024',
-          quality: 'standard',
-          style: 'vivid',
-          n: 1,
-        })
-
-        const dalleUrl = dalleResponse.data?.[0]?.url
-        if (dalleUrl) {
-          // Convert to base64 so the image never expires in storage
-          const imgResponse = await fetch(dalleUrl)
-          const arrayBuffer = await imgResponse.arrayBuffer()
-          const base64 = Buffer.from(arrayBuffer).toString('base64')
-          const mimeType = imgResponse.headers.get('content-type') || 'image/png'
-          illustrationUrl = `data:${mimeType};base64,${base64}`
-        }
-      } catch (imgErr) {
-        console.error('DALL-E generation failed:', imgErr)
-        // Continue without illustration — story is still returned
+      const imgResponse = await fetch(pollinationsUrl)
+      if (imgResponse.ok) {
+        const arrayBuffer = await imgResponse.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg'
+        illustrationUrl = `data:${mimeType};base64,${base64}`
       }
+    } catch (imgErr) {
+      console.error('Pollinations image generation failed:', imgErr)
+      // Continue without illustration — story is still returned
     }
 
     return NextResponse.json({
