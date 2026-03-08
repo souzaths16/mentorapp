@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
-    return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
   }
 
-  const openai = new OpenAI({ apiKey })
+  const client = new Anthropic({ apiKey })
 
   try {
     const { animals, location, theme } = await req.json()
@@ -45,51 +45,29 @@ Responda APENAS com este JSON (sem mais texto, sem markdown):
     { "pt": "Parágrafo 3 em português...", "ca": "Paràgraf 3 en català..." },
     { "pt": "Parágrafo 4 em português...", "ca": "Paràgraf 4 en català..." },
     { "pt": "Parágrafo 5 em português...", "ca": "Paràgraf 5 en català..." }
-  ],
-  "illustrationPrompt": "Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}. Soft warm colors, whimsical style like Oliver Jeffers books. No text, wide format, dreamy magical atmosphere."
+  ]
 }`
 
-    // Generate story
-    const storyResponse = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.85,
-      response_format: { type: 'json_object' },
+    const response = await client.messages.create({
+      model: 'claude-opus-4-6',
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
     })
 
-    const storyContent = storyResponse.choices[0].message.content || '{}'
-    const storyData = JSON.parse(storyContent)
-
-    // Generate illustration with DALL-E 3
-    let illustrationUrl = ''
-    try {
-      const illustrationPrompt = storyData.illustrationPrompt ||
-        `Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}.
-         Soft warm colors, whimsical style like Oliver Jeffers or Nicola Kinnear.
-         No text, wide format, dreamy and magical atmosphere.`
-
-      const imageResponse = await openai.images.generate({
-        model: 'dall-e-3',
-        prompt: illustrationPrompt,
-        size: '1792x1024',
-        quality: 'standard',
-        style: 'vivid',
-        n: 1,
-      })
-
-      illustrationUrl = (imageResponse.data ?? [])[0]?.url || ''
-    } catch (imgError) {
-      console.error('Image generation failed:', imgError)
-      illustrationUrl = ''
+    const textBlock = response.content.find((b) => b.type === 'text')
+    if (!textBlock || textBlock.type !== 'text') {
+      throw new Error('No text response from Claude')
     }
+
+    // Strip markdown code fences if present
+    const raw = textBlock.text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+    const storyData = JSON.parse(raw)
 
     return NextResponse.json({
       titlePt: storyData.titlePt,
       titleCa: storyData.titleCa,
-      illustrationUrl,
+      illustrationUrl: '',
       sections: storyData.sections,
     })
   } catch (error) {
