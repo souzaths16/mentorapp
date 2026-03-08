@@ -13,45 +13,36 @@ export async function POST(req: NextRequest) {
   try {
     const { animals, location, theme } = await req.json()
 
-    const animalNamesPt = animals.map((a: { namePt: string }) => a.namePt).join(', ')
+    const animalNamesPt = animals.map((a: { namePt: string }) => a.namePt).join(' e ')
+    const animalNamesCa = animals.map((a: { nameCa: string }) => a.nameCa).join(' i ')
     const animalEmojis = animals.map((a: { emoji: string }) => a.emoji).join(' ')
 
     const systemPrompt = `Você é um contador de histórias infantil especializado em criar contos para crianças com autismo leve.
-Você cria histórias gentis, com linguagem simples, repetição reconfortante e finais felizes e claros.
-As histórias devem ser educativas mas envolventes, com personagens animais adoráveis.
-IMPORTANTE: Você SEMPRE responde com JSON válido, sem markdown adicional.`
+Crie histórias gentis, com linguagem simples, repetição reconfortante e finais felizes e claros.
+IMPORTANTE: Responda SEMPRE com JSON válido, sem markdown adicional.`
 
-    const userPrompt = `Crie um conto infantil em DUAS línguas simultaneamente: Português do Brasil e Catalão.
+    const userPrompt = `Crie um conto infantil em Português do Brasil e Catalão.
 
-Animais da história: ${animalNamesPt} (${animalEmojis})
+Animais: ${animalNamesPt} (${animalEmojis})
 Local: ${location.namePt} / ${location.nameCa}
-Tema educacional: ${theme.namePt} - ${theme.descPt}
+Tema: ${theme.namePt} — ${theme.descPt}
 
-Informação importante: O Gael tem 4-6 anos e autismo leve. A história deve:
-- Ter linguagem simples e direta
-- Mostrar claramente as emoções dos personagens
-- Ter uma lição gentil sobre o tema escolhido
-- Ser tranquilizadora e positiva
-- Ter 5 parágrafos curtos (4-6 frases cada)
-- Terminar de forma feliz e clara
-- O Catalão deve ser Catalão correto e natural (não Espanhol)
+A história é para o Gael, 4-6 anos, autismo leve. Use linguagem simples, emoções claras, lição gentil, fim feliz. 5 parágrafos curtos. O Catalão deve ser correto (não Espanhol).
 
-Responda APENAS com este JSON (sem mais texto, sem markdown):
+Responda APENAS com este JSON:
 {
   "titlePt": "Título em Português",
   "titleCa": "Títol en Català",
   "sections": [
-    { "pt": "Parágrafo 1 em português...", "ca": "Paràgraf 1 en català..." },
-    { "pt": "Parágrafo 2 em português...", "ca": "Paràgraf 2 en català..." },
-    { "pt": "Parágrafo 3 em português...", "ca": "Paràgraf 3 en català..." },
-    { "pt": "Parágrafo 4 em português...", "ca": "Paràgraf 4 en català..." },
-    { "pt": "Parágrafo 5 em português...", "ca": "Paràgraf 5 en català..." }
-  ],
-  "illustrationPrompt": "Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}. Soft warm colors, whimsical style like Oliver Jeffers books. No text, wide format, dreamy magical atmosphere.",
-  "charactersPrompt": "Children's book illustration: cute ${animalNamesPt} as adorable sticker characters, isolated on plain white background, soft watercolor style, no scene or background environment, just the characters centered, square format."
+    { "pt": "parágrafo 1 PT", "ca": "paràgraf 1 CA" },
+    { "pt": "parágrafo 2 PT", "ca": "paràgraf 2 CA" },
+    { "pt": "parágrafo 3 PT", "ca": "paràgraf 3 CA" },
+    { "pt": "parágrafo 4 PT", "ca": "paràgraf 4 CA" },
+    { "pt": "parágrafo 5 PT", "ca": "paràgraf 5 CA" }
+  ]
 }`
 
-    // Generate story with Claude
+    // 1. Generate story text with Claude
     const response = await client.messages.create({
       model: 'claude-opus-4-6',
       max_tokens: 4096,
@@ -60,56 +51,51 @@ Responda APENAS com este JSON (sem mais texto, sem markdown):
     })
 
     const textBlock = response.content.find((b) => b.type === 'text')
-    if (!textBlock || textBlock.type !== 'text') {
-      throw new Error('No text response from Claude')
-    }
+    if (!textBlock || textBlock.type !== 'text') throw new Error('No text response from Claude')
 
-    // Strip markdown code fences if present
     const raw = textBlock.text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
     const storyData = JSON.parse(raw)
 
-    // Generate both illustrations with DALL-E 3 in parallel (if OpenAI key available)
+    // 2. Generate illustration with DALL-E 3
     let illustrationUrl = ''
-    let charactersUrl = ''
     const openaiKey = process.env.OPENAI_API_KEY
     if (openaiKey) {
-      const openai = new OpenAI({ apiKey: openaiKey })
+      try {
+        const openai = new OpenAI({ apiKey: openaiKey })
 
-      const coverPrompt = storyData.illustrationPrompt ||
-        `Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}. Soft warm colors, whimsical style like Oliver Jeffers. No text, wide format, dreamy magical atmosphere.`
+        // Style inspired by Tadgh, Gediminas Pranckevicius, Marcela Soares, Mo Mo
+        const illustrationPrompt =
+          `Children's picture book illustration. Painterly style with soft watercolor and gouache textures. ` +
+          `Warm muted pastel palette: peach, sage green, dusty blue, warm cream, soft amber. ` +
+          `Expressive rounded cute animal characters with big friendly eyes. ` +
+          `Detailed atmospheric background with soft dreamy lighting. ` +
+          `Cozy magical mood, lush environment. Similar to modern children's picture books. ` +
+          `No text, no words, no letters anywhere in the image. ` +
+          `Scene: ${animalNamesCa} (${animalEmojis}) in a ${location.namePt.toLowerCase()}, ` +
+          `showing the theme of "${theme.namePt.toLowerCase()}". ` +
+          `Wide horizontal composition, full background scene.`
 
-      const charsPrompt = storyData.charactersPrompt ||
-        `Children's book illustration: cute ${animalNamesPt} as adorable sticker characters, isolated on plain white background, soft watercolor style, no background scene, just the characters, square format.`
-
-      const [coverResult, charsResult] = await Promise.allSettled([
-        openai.images.generate({
+        const dalleResponse = await openai.images.generate({
           model: 'dall-e-3',
-          prompt: coverPrompt,
+          prompt: illustrationPrompt,
           size: '1792x1024',
           quality: 'standard',
           style: 'vivid',
           n: 1,
-        }),
-        openai.images.generate({
-          model: 'dall-e-3',
-          prompt: charsPrompt,
-          size: '1024x1024',
-          quality: 'standard',
-          style: 'natural',
-          n: 1,
-        }),
-      ])
+        })
 
-      if (coverResult.status === 'fulfilled') {
-        illustrationUrl = (coverResult.value.data ?? [])[0]?.url || ''
-      } else {
-        console.error('Cover image generation failed:', coverResult.reason)
-      }
-
-      if (charsResult.status === 'fulfilled') {
-        charactersUrl = (charsResult.value.data ?? [])[0]?.url || ''
-      } else {
-        console.error('Characters image generation failed:', charsResult.reason)
+        const dalleUrl = dalleResponse.data?.[0]?.url
+        if (dalleUrl) {
+          // Convert to base64 so the image never expires in storage
+          const imgResponse = await fetch(dalleUrl)
+          const arrayBuffer = await imgResponse.arrayBuffer()
+          const base64 = Buffer.from(arrayBuffer).toString('base64')
+          const mimeType = imgResponse.headers.get('content-type') || 'image/png'
+          illustrationUrl = `data:${mimeType};base64,${base64}`
+        }
+      } catch (imgErr) {
+        console.error('DALL-E generation failed:', imgErr)
+        // Continue without illustration — story is still returned
       }
     }
 
@@ -117,7 +103,6 @@ Responda APENAS com este JSON (sem mais texto, sem markdown):
       titlePt: storyData.titlePt,
       titleCa: storyData.titleCa,
       illustrationUrl,
-      charactersUrl,
       sections: storyData.sections,
     })
   } catch (error) {

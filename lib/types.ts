@@ -38,7 +38,6 @@ export interface StoryData {
   titlePt: string
   titleCa: string
   illustrationUrl: string
-  charactersUrl: string
   sections: StorySection[]
 }
 
