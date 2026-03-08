@@ -29,6 +29,14 @@ export default function StoryPage() {
     setIsFavorite(found.favorite)
   }, [id, router])
 
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) audioRef.current.pause()
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
+    }
+  }, [])
+
   function handleFavorite() {
     toggleFavorite(id)
     setIsFavorite((prev) => !prev)
@@ -49,17 +57,15 @@ export default function StoryPage() {
       return
     }
 
-    // Generate audio
+    // If already have cached audio URL, just play it
+    if (audioUrlRef.current) {
+      playAudio(audioUrlRef.current)
+      return
+    }
+
     setAudioState('loading')
     try {
-      // Build full Catalan text for narration
       const fullText = `${story.story.titleCa}. ${story.story.sections.map((s) => s.ca).join('. ')}`
-
-      // Check if we already have a cached audio URL
-      if (audioUrlRef.current) {
-        playAudio(audioUrlRef.current)
-        return
-      }
 
       const response = await fetch('/api/audio', {
         method: 'POST',
@@ -88,7 +94,6 @@ export default function StoryPage() {
         setAudioProgress((audio.currentTime / audio.duration) * 100)
       }
     })
-
     audio.addEventListener('ended', () => {
       setAudioState('idle')
       setAudioProgress(0)
@@ -116,11 +121,7 @@ export default function StoryPage() {
           <Link href="/salvos" className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-lg">
             ←
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">
-              {story.animals.map((a) => a.emoji).join('')}
-            </span>
-          </div>
+          <span className="text-lg">{story.animals.map((a) => a.emoji).join(' ')}</span>
           <button
             onClick={handleFavorite}
             className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-xl active:scale-90 transition-transform"
@@ -154,8 +155,6 @@ export default function StoryPage() {
         <h2 className="font-display text-2xl text-[#4ECDC4] font-semibold mt-1">
           {storyData.titleCa}
         </h2>
-
-        {/* Meta info */}
         <div className="flex flex-wrap gap-2 mt-3">
           <Chip emoji={story.location.emoji} text={story.location.namePt} color="#4ECDC4" />
           <Chip emoji={story.theme.emoji} text={story.theme.namePt} color="#FFD93D" />
@@ -186,13 +185,12 @@ export default function StoryPage() {
               🎙 Ouvir em Catalão · Escoltar en Català
             </p>
             <p className="text-xs text-gray-400 mt-0.5">
-              {audioState === 'idle' && 'Voz nativa em Catalão · Veu nativa en Català'}
-              {audioState === 'loading' && 'Gerando áudio... · Generant àudio...'}
+              {audioState === 'idle' && 'Voz nativa · Veu nativa'}
+              {audioState === 'loading' && 'Preparando áudio... · Preparant àudio...'}
               {audioState === 'playing' && 'A reproduzir... · Reproduint...'}
               {audioState === 'paused' && 'Pausado · En pausa'}
-              {audioState === 'error' && '⚠️ Erro - API key necessária · Error - Cal clau API'}
+              {audioState === 'error' && '⚠️ Erro ao gerar áudio · Error en generar àudio'}
             </p>
-            {/* Progress bar */}
             {(audioState === 'playing' || audioState === 'paused') && (
               <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                 <div
@@ -211,22 +209,17 @@ export default function StoryPage() {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="flex items-center gap-2 bg-green-50 rounded-xl px-3 py-2">
             <span className="text-xl">🇧🇷</span>
-            <div>
-              <p className="text-xs font-bold text-green-700">Português BR</p>
-            </div>
+            <p className="text-xs font-bold text-green-700">Português BR</p>
           </div>
           <div className="flex items-center gap-2 bg-yellow-50 rounded-xl px-3 py-2">
             <span className="text-xl">🟡🔴</span>
-            <div>
-              <p className="text-xs font-bold text-yellow-700">Català</p>
-            </div>
+            <p className="text-xs font-bold text-yellow-700">Català</p>
           </div>
         </div>
 
         {/* Story sections */}
         {storyData.sections.map((section, index) => (
           <div key={index} className="mb-6">
-            {/* Section number */}
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-full bg-[#4ECDC4] flex items-center justify-center
                               text-white text-xs font-bold flex-shrink-0">
@@ -234,26 +227,18 @@ export default function StoryPage() {
               </div>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
-
-            {/* Bilingual text side by side */}
             <div className="grid grid-cols-2 gap-3">
-              {/* Portuguese */}
               <div className="bg-green-50 rounded-2xl p-4 border-l-4 border-green-400">
-                <p className="story-text text-sm text-gray-800 leading-relaxed">
-                  {section.pt}
-                </p>
+                <p className="story-text text-sm text-gray-800 leading-relaxed">{section.pt}</p>
               </div>
-              {/* Catalan */}
               <div className="bg-yellow-50 rounded-2xl p-4 border-l-4 border-yellow-400">
-                <p className="story-text text-sm text-gray-800 leading-relaxed italic">
-                  {section.ca}
-                </p>
+                <p className="story-text text-sm text-gray-800 leading-relaxed italic">{section.ca}</p>
               </div>
             </div>
           </div>
         ))}
 
-        {/* End decoration */}
+        {/* End */}
         <div className="text-center py-6">
           <div className="text-4xl mb-2">🌟</div>
           <p className="font-display text-lg text-gray-500">Fim · Fi</p>
@@ -296,27 +281,24 @@ function Chip({ emoji, text, color }: { emoji: string; text: string; color: stri
 }
 
 function IllustrationPlaceholder({ story }: { story: SavedStory }) {
-  const bgColors = ['#4ECDC4', '#A29BFE', '#FFD93D', '#FF6B6B', '#55EFC4']
-  const animals = story.animals
+  const gradients = [
+    ['#4ECDC4', '#A29BFE'],
+    ['#FFD93D', '#FF6B6B'],
+    ['#55EFC4', '#4ECDC4'],
+  ]
+  const [g1, g2] = gradients[story.animals.length % gradients.length]
 
   return (
     <div
       className="w-full h-full flex flex-col items-center justify-center"
-      style={{
-        background: `linear-gradient(135deg, ${bgColors[0]}, ${bgColors[1]}, ${bgColors[2]})`,
-      }}
+      style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
     >
-      <div className="flex gap-4 text-7xl mb-4">
-        {animals.slice(0, 3).map((a) => (
-          <span key={a.id} className="float drop-shadow-lg">
-            {a.emoji}
-          </span>
+      <div className="flex gap-3 text-7xl mb-4">
+        {story.animals.slice(0, 3).map((a) => (
+          <span key={a.id} className="float drop-shadow-lg">{a.emoji}</span>
         ))}
       </div>
-      <div className="text-4xl">{story.location.emoji}</div>
-      <p className="text-white/70 text-xs mt-3 font-display">
-        Ilustração · Il·lustració
-      </p>
+      <div className="text-5xl">{story.location.emoji}</div>
     </div>
   )
 }
