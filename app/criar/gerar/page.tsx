@@ -20,7 +20,6 @@ export default function GeneratingStory() {
   const hasStarted = useRef(false)
 
   useEffect(() => {
-    // Cycle through messages
     const interval = setInterval(() => {
       setMsgIndex((i) => (i + 1) % loadingMessages.length)
     }, 2500)
@@ -74,7 +73,6 @@ export default function GeneratingStory() {
 
       saveStory(savedStory)
 
-      // Clear session
       sessionStorage.removeItem('gael-animals')
       sessionStorage.removeItem('gael-location')
       sessionStorage.removeItem('gael-theme')
@@ -88,13 +86,14 @@ export default function GeneratingStory() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
-           style={{ background: '#FFF8E7' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center page-enter"
+           style={{ background: 'var(--cream)' }}>
         <div className="text-6xl mb-4">😕</div>
-        <p className="font-display text-xl text-gray-700 mb-6">{error}</p>
+        <p className="text-xl font-black mb-2" style={{ color: 'var(--text)' }}>{error}</p>
         <button
           onClick={() => router.replace('/criar')}
-          className="bg-[#4ECDC4] text-white font-display text-lg font-bold py-3 px-8 rounded-2xl"
+          className="text-white font-black text-lg py-3 px-8 rounded-2xl mt-4"
+          style={{ background: 'var(--teal)' }}
         >
           Voltar · Tornar
         </button>
@@ -103,8 +102,8 @@ export default function GeneratingStory() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
-         style={{ background: 'linear-gradient(160deg, #A29BFE 0%, #FFF8E7 50%)' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center page-enter"
+         style={{ background: 'var(--cream)' }}>
 
       {/* Animated animals */}
       <div className="flex gap-4 text-6xl mb-8">
@@ -122,19 +121,22 @@ export default function GeneratingStory() {
       {/* Magic wand */}
       <div className="text-8xl mb-6 float">✨</div>
 
-      <h2 className="font-display text-3xl font-bold text-gray-800 mb-2">
+      <h2 className="text-3xl font-black mb-2" style={{ color: 'var(--text)' }}>
         Criando o seu Conto...
       </h2>
-      <p className="font-display text-xl text-purple-400 font-semibold mb-8">
+      <p className="text-xl font-semibold mb-8" style={{ color: 'var(--teal)' }}>
         Creant el vostre Conte...
       </p>
 
       {/* Loading message */}
-      <div className="bg-white/80 rounded-2xl px-6 py-4 shadow-md mb-8">
-        <p className="font-body text-gray-700 font-semibold pulse-soft">
+      <div
+        className="rounded-2xl px-6 py-4 mb-8 border"
+        style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}
+      >
+        <p className="font-bold pulse-soft" style={{ color: 'var(--text)' }}>
           {loadingMessages[msgIndex].pt}
         </p>
-        <p className="font-body text-purple-400 text-sm pulse-soft">
+        <p className="text-sm pulse-soft mt-1" style={{ color: 'var(--teal)' }}>
           {loadingMessages[msgIndex].ca}
         </p>
       </div>
@@ -144,8 +146,9 @@ export default function GeneratingStory() {
         {[0, 1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="w-3 h-3 rounded-full bg-purple-300"
+            className="w-3 h-3 rounded-full"
             style={{
+              background: 'var(--teal)',
               animation: 'pulse-soft 1.5s ease-in-out infinite',
               animationDelay: `${i * 0.2}s`,
             }}
@@ -153,7 +156,7 @@ export default function GeneratingStory() {
         ))}
       </div>
 
-      <p className="text-gray-400 text-xs mt-8">
+      <p className="text-xs mt-8" style={{ color: 'var(--text-muted)' }}>
         Isso pode levar até 30 segundos · Pot trigar fins a 30 segons
       </p>
     </div>

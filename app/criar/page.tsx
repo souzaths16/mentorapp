@@ -107,10 +107,10 @@ export default function ChooseAnimals() {
                 className="card-press relative text-left p-4 rounded-3xl border"
                 style={
                   isSelected
-                    ? { background: 'var(--blue-tab)', borderColor: 'var(--blue-tab)' }
+                    ? { background: 'var(--teal)', borderColor: 'var(--teal)' }
                     : isDisabled
-                    ? { background: '#f0f0f0', borderColor: '#e0e0e0', opacity: 0.4 }
-                    : { background: 'var(--blue-tab-bg)', borderColor: 'transparent' }
+                    ? { background: 'var(--card)', borderColor: 'var(--card-border)', opacity: 0.4 }
+                    : { background: 'var(--card)', borderColor: 'var(--card-border)' }
                 }
               >
                 {isSelected && (
@@ -124,7 +124,7 @@ export default function ChooseAnimals() {
                 <div className="text-4xl mb-3">{animal.emoji}</div>
                 <p
                   className="text-base font-black leading-tight"
-                  style={{ color: isSelected ? 'white' : 'var(--blue-tab)' }}
+                  style={{ color: isSelected ? 'white' : 'var(--text)' }}
                 >
                   {animal.nameCa}
                 </p>

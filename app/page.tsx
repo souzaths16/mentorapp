@@ -27,10 +27,10 @@ export default function Home() {
         </div>
         <Link href="/criar">
           <button
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-sm"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl font-black shadow-sm"
             style={{ background: 'var(--teal-light)', color: 'var(--teal)' }}
           >
-            ✦
+            +
           </button>
         </Link>
       </div>

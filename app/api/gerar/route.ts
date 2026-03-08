@@ -1,89 +1,87 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
+  const anthropicKey = process.env.ANTHROPIC_API_KEY
+  if (!anthropicKey) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
   }
 
-  const openai = new OpenAI({ apiKey })
+  const client = new Anthropic({ apiKey: anthropicKey })
 
   try {
     const { animals, location, theme } = await req.json()
 
-    const animalNamesPt = animals.map((a: { namePt: string }) => a.namePt).join(', ')
+    const animalNamesPt = animals.map((a: { namePt: string }) => a.namePt).join(' e ')
+    const animalNamesCa = animals.map((a: { nameCa: string }) => a.nameCa).join(' i ')
     const animalEmojis = animals.map((a: { emoji: string }) => a.emoji).join(' ')
 
     const systemPrompt = `Você é um contador de histórias infantil especializado em criar contos para crianças com autismo leve.
-Você cria histórias gentis, com linguagem simples, repetição reconfortante e finais felizes e claros.
-As histórias devem ser educativas mas envolventes, com personagens animais adoráveis.
-IMPORTANTE: Você SEMPRE responde com JSON válido, sem markdown adicional.`
+Crie histórias gentis, com linguagem simples, repetição reconfortante e finais felizes e claros.
+IMPORTANTE: Responda SEMPRE com JSON válido, sem markdown adicional.`
 
-    const userPrompt = `Crie um conto infantil em DUAS línguas simultaneamente: Português do Brasil e Catalão.
+    const userPrompt = `Crie um conto infantil em Português do Brasil e Catalão.
 
-Animais da história: ${animalNamesPt} (${animalEmojis})
+Animais: ${animalNamesPt} (${animalEmojis})
 Local: ${location.namePt} / ${location.nameCa}
-Tema educacional: ${theme.namePt} - ${theme.descPt}
+Tema: ${theme.namePt} — ${theme.descPt}
 
-Informação importante: O Gael tem 4-6 anos e autismo leve. A história deve:
-- Ter linguagem simples e direta
-- Mostrar claramente as emoções dos personagens
-- Ter uma lição gentil sobre o tema escolhido
-- Ser tranquilizadora e positiva
-- Ter 5 parágrafos curtos (4-6 frases cada)
-- Terminar de forma feliz e clara
-- O Catalão deve ser Catalão correto e natural (não Espanhol)
+A história é para o Gael, 4-6 anos, autismo leve. Use linguagem simples, emoções claras, lição gentil, fim feliz. 5 parágrafos curtos. O Catalão deve ser correto (não Espanhol).
 
-Responda APENAS com este JSON (sem mais texto, sem markdown):
+Responda APENAS com este JSON:
 {
   "titlePt": "Título em Português",
   "titleCa": "Títol en Català",
   "sections": [
-    { "pt": "Parágrafo 1 em português...", "ca": "Paràgraf 1 en català..." },
-    { "pt": "Parágrafo 2 em português...", "ca": "Paràgraf 2 en català..." },
-    { "pt": "Parágrafo 3 em português...", "ca": "Paràgraf 3 en català..." },
-    { "pt": "Parágrafo 4 em português...", "ca": "Paràgraf 4 en català..." },
-    { "pt": "Parágrafo 5 em português...", "ca": "Paràgraf 5 en català..." }
-  ],
-  "illustrationPrompt": "Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}. Soft warm colors, whimsical style like Oliver Jeffers books. No text, wide format, dreamy magical atmosphere."
+    { "pt": "parágrafo 1 PT", "ca": "paràgraf 1 CA" },
+    { "pt": "parágrafo 2 PT", "ca": "paràgraf 2 CA" },
+    { "pt": "parágrafo 3 PT", "ca": "paràgraf 3 CA" },
+    { "pt": "parágrafo 4 PT", "ca": "paràgraf 4 CA" },
+    { "pt": "parágrafo 5 PT", "ca": "paràgraf 5 CA" }
+  ]
 }`
 
-    // Generate story
-    const storyResponse = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.85,
-      response_format: { type: 'json_object' },
+    // 1. Generate story text with Claude
+    const response = await client.messages.create({
+      model: 'claude-opus-4-6',
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
     })
 
-    const storyContent = storyResponse.choices[0].message.content || '{}'
-    const storyData = JSON.parse(storyContent)
+    const textBlock = response.content.find((b) => b.type === 'text')
+    if (!textBlock || textBlock.type !== 'text') throw new Error('No text response from Claude')
 
-    // Generate illustration with DALL-E 3
+    const raw = textBlock.text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
+    const storyData = JSON.parse(raw)
+
+    // 2. Generate illustration with Pollinations.ai (free, no API key needed)
     let illustrationUrl = ''
     try {
-      const illustrationPrompt = storyData.illustrationPrompt ||
-        `Children's book watercolor illustration: cute ${animalNamesPt} in ${location.namePt}.
-         Soft warm colors, whimsical style like Oliver Jeffers or Nicola Kinnear.
-         No text, wide format, dreamy and magical atmosphere.`
+      const illustrationPrompt =
+        `Children's picture book illustration. Painterly style with soft watercolor and gouache textures. ` +
+        `Warm muted pastel palette: peach, sage green, dusty blue, warm cream, soft amber. ` +
+        `Expressive rounded cute animal characters with big friendly eyes. ` +
+        `Detailed atmospheric background with soft dreamy lighting. ` +
+        `Cozy magical mood, lush environment. Similar to modern children's picture books. ` +
+        `No text, no words, no letters anywhere in the image. ` +
+        `Scene: ${animalNamesCa} (${animalEmojis}) in a ${location.namePt.toLowerCase()}, ` +
+        `showing the theme of "${theme.namePt.toLowerCase()}". ` +
+        `Wide horizontal composition, full background scene.`
 
-      const imageResponse = await openai.images.generate({
-        model: 'dall-e-3',
-        prompt: illustrationPrompt,
-        size: '1792x1024',
-        quality: 'standard',
-        style: 'vivid',
-        n: 1,
-      })
+      const encodedPrompt = encodeURIComponent(illustrationPrompt)
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1792&height=1024&nologo=true&model=flux`
 
-      illustrationUrl = (imageResponse.data ?? [])[0]?.url || ''
-    } catch (imgError) {
-      console.error('Image generation failed:', imgError)
-      illustrationUrl = ''
+      const imgResponse = await fetch(pollinationsUrl)
+      if (imgResponse.ok) {
+        const arrayBuffer = await imgResponse.arrayBuffer()
+        const base64 = Buffer.from(arrayBuffer).toString('base64')
+        const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg'
+        illustrationUrl = `data:${mimeType};base64,${base64}`
+      }
+    } catch (imgErr) {
+      console.error('Pollinations image generation failed:', imgErr)
+      // Continue without illustration — story is still returned
     }
 
     return NextResponse.json({
