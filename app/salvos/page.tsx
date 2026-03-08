@@ -20,75 +20,84 @@ export default function SavedStories() {
 
   const filtered = filter === 'favorites' ? stories.filter((s) => s.favorite) : stories
 
-  const formatDate = (iso: string) => {
-    const d = new Date(iso)
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
-  }
-
   return (
-    <div className="min-h-screen" style={{ background: '#FFF8E7' }}>
+    <div className="min-h-screen pb-28 page-enter" style={{ background: 'var(--cream)' }}>
+
       {/* Header */}
-      <div className="px-5 pt-8 pb-4"
-           style={{ background: 'linear-gradient(160deg, #FFD93D 0%, #FFF8E7 60%)' }}>
+      <div className="px-5 pt-8 pb-4">
         <div className="flex items-center gap-3 mb-4">
-          <Link href="/" className="w-9 h-9 bg-white/70 rounded-full flex items-center justify-center shadow text-lg">
-            ←
+          <Link href="/">
+            <button
+              className="w-10 h-10 rounded-2xl flex items-center justify-center text-base font-bold border"
+              style={{ background: 'var(--card)', borderColor: 'var(--card-border)', color: 'var(--text)' }}
+            >
+              ←
+            </button>
           </Link>
           <div>
-            <h2 className="font-display text-2xl font-bold text-gray-800">Histórias Salvas</h2>
-            <p className="font-display text-base text-amber-500">Històries Guardades</p>
+            <h2 className="text-2xl font-black" style={{ color: 'var(--text)' }}>
+              Històries Guardades
+            </h2>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+              Histórias Salvas
+            </p>
           </div>
         </div>
 
         {/* Filter tabs */}
         <div className="flex gap-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-full font-semibold text-sm transition-all ${
-              filter === 'all'
-                ? 'bg-[#FFD93D] text-gray-800 shadow-md'
-                : 'bg-white text-gray-500 border border-gray-200'
-            }`}
-          >
-            📚 Todas ({stories.length})
-          </button>
-          <button
-            onClick={() => setFilter('favorites')}
-            className={`px-4 py-2 rounded-full font-semibold text-sm transition-all ${
-              filter === 'favorites'
-                ? 'bg-[#FFD93D] text-gray-800 shadow-md'
-                : 'bg-white text-gray-500 border border-gray-200'
-            }`}
-          >
-            ⭐ Favoritas ({stories.filter((s) => s.favorite).length})
-          </button>
+          {[
+            { key: 'all', label: `📚 Totes (${stories.length})`, labelPt: 'Todas' },
+            { key: 'favorites', label: `🩷 Favorites (${stories.filter(s => s.favorite).length})`, labelPt: 'Favoritas' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(tab.key as 'all' | 'favorites')}
+              className="px-4 py-2 rounded-2xl text-sm font-bold transition-colors"
+              style={
+                filter === tab.key
+                  ? { background: 'var(--teal)', color: 'white' }
+                  : { background: 'var(--card)', color: 'var(--text-muted)', border: '1.5px solid var(--card-border)' }
+              }
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Stories list */}
-      <div className="px-4 py-4">
+      {/* List */}
+      <div className="px-5">
         {filtered.length === 0 ? (
-          <EmptyState filter={filter} />
+          <div
+            className="rounded-3xl p-10 text-center border mt-2"
+            style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}
+          >
+            <div className="text-5xl mb-3">{filter === 'favorites' ? '🩷' : '📖'}</div>
+            <p className="font-black text-base" style={{ color: 'var(--text)' }}>
+              {filter === 'favorites' ? 'Sem favoritas ainda' : 'Sem histórias ainda'}
+            </p>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+              {filter === 'favorites' ? 'Encara no hi ha favorites' : 'Encara no hi ha contes'}
+            </p>
+          </div>
         ) : (
           <div className="flex flex-col gap-3">
             {filtered.map((story) => (
-              <StoryCard
-                key={story.id}
-                story={story}
-                onDelete={() => handleDelete(story.id)}
-              />
+              <StoryCard key={story.id} story={story} onDelete={() => handleDelete(story.id)} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Create new button */}
+      {/* FAB */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2">
         <Link href="/criar">
-          <button className="bg-[#4ECDC4] text-white font-display text-lg font-bold
-                             py-3 px-8 rounded-full shadow-lg active:scale-95 transition-transform
-                             flex items-center gap-2">
-            ✨ Nova História
+          <button
+            className="flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-base shadow-lg"
+            style={{ background: 'var(--teal)', color: 'white' }}
+          >
+            ✦ Nova Història · Nova História
           </button>
         </Link>
       </div>
@@ -97,92 +106,76 @@ export default function SavedStories() {
 }
 
 function StoryCard({ story, onDelete }: { story: SavedStory; onDelete: () => void }) {
-  const [showDelete, setShowDelete] = useState(false)
-  const formatDate = (iso: string) => {
-    const d = new Date(iso)
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-  }
+  const [showMenu, setShowMenu] = useState(false)
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Color bar */}
-      <div
-        className="h-2"
-        style={{
-          background: 'linear-gradient(90deg, #4ECDC4, #A29BFE, #FFD93D)',
-        }}
-      />
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <Link href={`/historia/${story.id}`} className="flex-1">
-            <div>
-              {/* Animals */}
-              <div className="flex gap-1 text-2xl mb-2">
-                {story.animals.map((a) => (
-                  <span key={a.id}>{a.emoji}</span>
-                ))}
-                <span className="ml-1">{story.location.emoji}</span>
-              </div>
-
-              <h3 className="font-display text-lg font-bold text-gray-800 leading-tight">
-                {story.story.titlePt}
-              </h3>
-              <p className="font-display text-sm text-[#4ECDC4] font-semibold">
-                {story.story.titleCa}
-              </p>
-
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs bg-amber-50 text-amber-600 font-semibold px-2 py-0.5 rounded-full">
-                  {story.theme.emoji} {story.theme.namePt}
-                </span>
-                <span className="text-xs text-gray-400">{formatDate(story.createdAt)}</span>
-                {story.favorite && <span className="text-sm">⭐</span>}
-              </div>
-            </div>
-          </Link>
-
-          <button
-            onClick={() => setShowDelete(!showDelete)}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
-                       text-gray-400 text-sm flex-shrink-0 active:scale-90 transition-transform"
+    <div
+      className="rounded-3xl border overflow-hidden"
+      style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}
+    >
+      <Link href={`/historia/${story.id}`}>
+        <div className="p-4 flex items-center gap-4 card-press">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+            style={{ background: 'var(--peach)' }}
           >
-            ···
-          </button>
-        </div>
-
-        {showDelete && (
-          <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+            {story.animals[0]?.emoji}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-base leading-tight truncate" style={{ color: 'var(--text)' }}>
+              {story.story.titleCa}
+            </p>
+            <p className="text-sm font-medium truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              {story.story.titlePt}
+            </p>
+            <div className="flex gap-1.5 mt-2 flex-wrap items-center">
+              <Tag emoji={story.location.emoji} label={story.location.nameCa} />
+              <Tag emoji={story.theme.emoji} label={story.theme.nameCa} />
+              <span className="text-xs font-medium ml-auto" style={{ color: 'var(--text-muted)' }}>
+                {formatDate(story.createdAt)}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-1 flex-shrink-0">
+            <span className="text-xl">{story.favorite ? '🩷' : '🤍'}</span>
             <button
-              onClick={onDelete}
-              className="text-red-400 text-sm font-semibold px-3 py-1.5 rounded-xl
-                         bg-red-50 active:scale-95 transition-transform"
+              onClick={(e) => { e.preventDefault(); setShowMenu(!showMenu) }}
+              className="text-xs font-bold px-1 py-0.5 rounded"
+              style={{ color: 'var(--text-muted)' }}
             >
-              🗑 Apagar · Esborrar
+              ···
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      </Link>
+      {showMenu && (
+        <div
+          className="flex justify-end px-4 pb-3 pt-0 border-t"
+          style={{ borderColor: 'var(--card-border)' }}
+        >
+          <button
+            onClick={onDelete}
+            className="text-sm font-bold px-4 py-2 rounded-xl"
+            style={{ background: '#FFF0F0', color: '#E55' }}
+          >
+            🗑 Apagar · Esborrar
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
-function EmptyState({ filter }: { filter: string }) {
+function Tag({ emoji, label }: { emoji: string; label: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="text-6xl mb-4 float">
-        {filter === 'favorites' ? '⭐' : '📖'}
-      </div>
-      <p className="font-display text-xl text-gray-600 mb-1">
-        {filter === 'favorites' ? 'Sem favoritas ainda' : 'Sem histórias ainda'}
-      </p>
-      <p className="font-display text-base text-[#4ECDC4]">
-        {filter === 'favorites' ? 'Encara no hi ha favorits' : 'Encara no hi ha contes'}
-      </p>
-      <p className="text-gray-400 text-sm mt-3">
-        {filter === 'favorites'
-          ? 'Marca uma história como favorita ⭐'
-          : 'Cria o primeiro conto do Gael! ✨'}
-      </p>
-    </div>
+    <span
+      className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
+      style={{ background: 'var(--cream)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}
+    >
+      {emoji} {label}
+    </span>
   )
 }
