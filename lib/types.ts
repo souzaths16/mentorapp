@@ -37,7 +37,7 @@ export interface StorySection {
 export interface StoryData {
   titlePt: string
   titleCa: string
-  illustrationUrl: string
+  illustrationUrls: string[]
   sections: StorySection[]
 }
 

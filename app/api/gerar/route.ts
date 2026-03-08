@@ -55,39 +55,39 @@ Responda APENAS com este JSON:
     const raw = textBlock.text.trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
     const storyData = JSON.parse(raw)
 
-    // 2. Generate illustration with Pollinations.ai (free, no API key needed)
-    let illustrationUrl = ''
-    try {
-      const illustrationPrompt =
-        `Children's picture book illustration. Painterly style with soft watercolor and gouache textures. ` +
-        `Warm muted pastel palette: peach, sage green, dusty blue, warm cream, soft amber. ` +
-        `Expressive rounded cute animal characters with big friendly eyes. ` +
-        `Detailed atmospheric background with soft dreamy lighting. ` +
-        `Cozy magical mood, lush environment. Similar to modern children's picture books. ` +
-        `No text, no words, no letters anywhere in the image. ` +
-        `Scene: ${animalNamesCa} (${animalEmojis}) in a ${location.namePt.toLowerCase()}, ` +
-        `showing the theme of "${theme.namePt.toLowerCase()}". ` +
-        `Wide horizontal composition, full background scene.`
+    // 2. Generate one illustration per section with Pollinations.ai (free, no API key needed)
+    const stylePrefix =
+      `Children's picture book illustration. Painterly style with soft watercolor and gouache textures. ` +
+      `Warm muted pastel palette: peach, sage green, dusty blue, warm cream, soft amber. ` +
+      `Expressive rounded cute animal characters with big friendly eyes. ` +
+      `Detailed atmospheric background with soft dreamy lighting. ` +
+      `Cozy magical mood, lush environment. Similar to modern children's picture books. ` +
+      `No text, no words, no letters anywhere in the image. ` +
+      `Characters: ${animalNamesPt} (${animalEmojis}). Location: ${location.namePt}. `
 
-      const encodedPrompt = encodeURIComponent(illustrationPrompt)
-      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1792&height=1024&nologo=true&model=flux`
-
-      const imgResponse = await fetch(pollinationsUrl)
-      if (imgResponse.ok) {
+    async function fetchIllustration(scenePt: string): Promise<string> {
+      try {
+        const prompt = stylePrefix + `Scene: ${scenePt} Wide horizontal composition, full background scene.`
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1792&height=1024&nologo=true&model=flux`
+        const imgResponse = await fetch(url)
+        if (!imgResponse.ok) return ''
         const arrayBuffer = await imgResponse.arrayBuffer()
         const base64 = Buffer.from(arrayBuffer).toString('base64')
         const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg'
-        illustrationUrl = `data:${mimeType};base64,${base64}`
+        return `data:${mimeType};base64,${base64}`
+      } catch {
+        return ''
       }
-    } catch (imgErr) {
-      console.error('Pollinations image generation failed:', imgErr)
-      // Continue without illustration — story is still returned
     }
+
+    const illustrationUrls = await Promise.all(
+      storyData.sections.map((s: { pt: string }) => fetchIllustration(s.pt))
+    )
 
     return NextResponse.json({
       titlePt: storyData.titlePt,
       titleCa: storyData.titleCa,
-      illustrationUrl,
+      illustrationUrls,
       sections: storyData.sections,
     })
   } catch (error) {
