@@ -156,24 +156,13 @@ export default function StoryPage() {
             style={{ background: '#fff', border: '1.5px solid #EDE5DC' }}
           >
             {/* Illustration — top of card */}
-            <div className="w-full" style={{ aspectRatio: '16/9', position: 'relative', background: '#F5EFE8' }}>
-              {imgUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={imgUrl}
-                  alt={`${sd.titleCa} — capítol ${index + 1}`}
-                  className="w-full h-full object-cover"
-                  loading={index === 0 ? 'eager' : 'lazy'}
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                  <div className="flex gap-3 text-6xl">
-                    {story.animals.map((a) => <span key={a.id} className="float">{a.emoji}</span>)}
-                  </div>
-                  <span className="text-4xl">{story.location.emoji}</span>
-                </div>
-              )}
-            </div>
+            <IllustrationCard
+              imgUrl={imgUrl}
+              alt={`${sd.titleCa} — capítol ${index + 1}`}
+              eager={index === 0}
+              animals={story.animals}
+              locationEmoji={story.location.emoji}
+            />
 
             {/* Chapter label */}
             <div className="px-4 pt-4 pb-1">
@@ -235,6 +224,41 @@ export default function StoryPage() {
           </Link>
         </div>
       </div>
+    </div>
+  )
+}
+
+function IllustrationCard({
+  imgUrl, alt, eager, animals, locationEmoji,
+}: {
+  imgUrl: string | undefined
+  alt: string
+  eager: boolean
+  animals: { id: string; emoji: string }[]
+  locationEmoji: string
+}) {
+  const [failed, setFailed] = useState(false)
+  const showEmoji = !imgUrl || failed
+
+  return (
+    <div className="w-full" style={{ aspectRatio: '16/9', position: 'relative', background: '#F5EFE8' }}>
+      {showEmoji ? (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+          <div className="flex gap-3 text-6xl">
+            {animals.map((a) => <span key={a.id} className="float">{a.emoji}</span>)}
+          </div>
+          <span className="text-4xl">{locationEmoji}</span>
+        </div>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imgUrl}
+          alt={alt}
+          className="w-full h-full object-cover"
+          loading={eager ? 'eager' : 'lazy'}
+          onError={() => setFailed(true)}
+        />
+      )}
     </div>
   )
 }
